@@ -1,0 +1,6 @@
+{
+  "name": "Finantra",
+  "description": "Uma plataforma moderna de gerenciamento financeiro focado em privacidade, onde você controla seus ganhos, gastos, despesas recorrentes e investimentos, com total segurança e sem conexões com dados bancários pessoais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
