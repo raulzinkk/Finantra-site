@@ -1,9 +1,9 @@
-const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "finanzy-7c859.firebaseapp.com",
-  projectId: "finanzy-7c859",
-  storageBucket: "finanzy-7c859.firebasestorage.app",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abc123xyz...",
-  measurementId: "G-XXXXXXXXXX"
-};
+{
+  "apiKey": "O_SEU_API_KEY_AQUI",
+  "authDomain": "finanzy-7c859.firebaseapp.com",
+  "projectId": "finanzy-7c859",
+  "storageBucket": "finanzy-7c859.firebasestorage.app",
+  "messagingSenderId": "123456789012",
+  "appId": "1:123456789012:web:abc123xyz...",
+  "measurementId": "G-XXXXXXXXXX"
+}
