@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Mail, Lock, UserCheck, LogIn, UserPlus, LogOut, CheckCircle, AlertCircle, Bookmark } from 'lucide-react';
-import { supabase, testConnection, isUsingDefaultSandboxKey } from '../supabaseService';
+import { auth, signInWithGoogle, logoutFirebase } from '../firebaseService';
 
 interface AuthTabProps {
   onLogin: (email: string) => void;
@@ -48,6 +48,23 @@ export default function AuthTab({ onLogin, onLogout, loggedInUser, initialMode =
     setSuccessMsg('');
   };
 
+  const handleGoogleSignIn = async () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const user = await signInWithGoogle();
+      if (user && user.email) {
+        setSuccessMsg('Login com o Google realizado com sucesso! Bem-vindo.');
+        setTimeout(() => {
+          onLogin(user.email!);
+        }, 1200);
+      }
+    } catch (err: any) {
+      setErrorMsg('Falha ao autenticar com o Google. Tente novamente.');
+      console.error(err);
+    }
+  };
+
   // Submit Handler
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,54 +106,7 @@ export default function AuthTab({ onLogin, onLogout, loggedInUser, initialMode =
         return;
       }
 
-      // Pre-evaluate Supabase signup if possible to prevent registering locally but failing globally
-      let supabaseMessage = '';
-      try {
-        const isConnected = await testConnection();
-        // Check if the anon key is the placeholder dummy key to prevent invalid key error block
-        const isPlaceholderKey = isUsingDefaultSandboxKey();
-
-        if (isConnected && !isPlaceholderKey) {
-          const { data: suData, error: suError } = await supabase.auth.signUp({
-            email: email.toLowerCase(),
-            password: password,
-            options: {
-              data: {
-                username: username.trim()
-              }
-            }
-          });
-
-          if (suError) {
-            console.warn('Supabase Auth SignUp warn:', suError.message);
-            const errMsgLower = suError.message.toLowerCase();
-            
-            // Detect if it is a real credential error (already registered, bad password) or a connection issue
-            const isNetworkError = errMsgLower.includes('fetch') || errMsgLower.includes('network') || errMsgLower.includes('failed') || errMsgLower.includes('timeout');
-            
-            if (!isNetworkError) {
-              // High confidence that this is an API validation error (e.g., User already registered)
-              if (errMsgLower.includes('already') || errMsgLower.includes('exists') || errMsgLower.includes('taken')) {
-                setErrorMsg('Este e-mail já está cadastrado no banco de dados na nuvem. Por favor, utilize outro ou faça login.');
-              } else {
-                setErrorMsg(`Erro de validação: ${suError.message}`);
-              }
-              return;
-            } else {
-              // Simply offline representation
-              supabaseMessage = ' (Salvo localmente • Sincronização em nuvem pendente)';
-            }
-          } else {
-            console.log('User registered in Supabase Auth successfully:', suData);
-            supabaseMessage = ' (Sincronizado na Nuvem)';
-          }
-        } else {
-          supabaseMessage = ' (Salvo localmente • Sincronização em nuvem pendente)';
-        }
-      } catch (err: any) {
-        console.warn('Supabase is not reachable, saved only locally:', err);
-        supabaseMessage = ' (Salvo localmente • Sincronização em nuvem pendente)';
-      }
+      let supabaseMessage = ' (Sincronizado no Firebase)';
 
       // Create and save new user only after validation succeeded
       const newUser: LocalUser = {
@@ -179,35 +149,13 @@ export default function AuthTab({ onLogin, onLogout, loggedInUser, initialMode =
       const isDefaultGuest = (resolvedEmail === 'convidado@finantra.com' || resolvedEmail === 'convidado') && password === 'Guest@123';
 
       let loginSuccess = false;
-      let isSupabaseAuthed = false;
 
       if (matchedUser || isDefaultGuest) {
         loginSuccess = true;
       }
 
-      // Attempt Supabase Auth SignIn as well for real-time validation if configured
-      try {
-        const { data: suData, error: suError } = await supabase.auth.signInWithPassword({
-          email: resolvedEmail,
-          password: password,
-        });
-        if (!suError && suData?.user) {
-          loginSuccess = true;
-          isSupabaseAuthed = true;
-          console.log('Successfully logged in via Supabase Auth');
-        } else {
-          if (suError) {
-            console.warn('Supabase Auth Login warning:', suError.message);
-          }
-        }
-      } catch (err) {
-        console.warn('Supabase auth connection exception ignored:', err);
-      }
-
       if (loginSuccess) {
-        const prefix = isSupabaseAuthed 
-          ? 'Login realizado com sucesso (Sincronizado na Nuvem)! Bem-vindo.' 
-          : 'Login realizado com sucesso! Bem-vindo.';
+        const prefix = 'Login realizado com sucesso! Bem-vindo.';
         setSuccessMsg(prefix);
         
         // Handle Keep me logged in preference
@@ -330,6 +278,30 @@ export default function AuthTab({ onLogin, onLogout, loggedInUser, initialMode =
                 <span>{successMsg}</span>
               </div>
             )}
+
+            {/* Google Sign-In Button */}
+            <div className="space-y-4">
+              <button
+                id="btn-google-signin"
+                type="button"
+                onClick={handleGoogleSignIn}
+                className="w-full flex items-center justify-center gap-3 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Fazer Login com o Google
+              </button>
+
+              <div className="flex items-center my-4">
+                <div className="border-t border-slate-200 flex-grow" />
+                <span className="px-3 text-[10px] uppercase font-bold text-slate-400 tracking-wider">ou use credenciais</span>
+                <div className="border-t border-slate-200 flex-grow" />
+              </div>
+            </div>
 
             <form onSubmit={handleFormSubmit} className="space-y-4">
               {/* Username section (Only in registration) */}

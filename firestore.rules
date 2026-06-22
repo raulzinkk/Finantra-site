@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Catch-all Default-Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common security primitive validators
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Type and Attribute validators to prevent poisoning or injection attacks
+    function isValidTransaction(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.type is string && (data.type == 'earnings' || data.type == 'expenses')
+        && data.description is string && data.description.size() <= 200
+        && data.amount is number && data.amount >= 0
+        && data.category is string && data.category.size() <= 100
+        && data.date is string && data.date.size() <= 50
+        && data.profileId is string && data.profileId.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid;
+    }
+
+    function isValidMonthlyBill(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.description is string && data.description.size() <= 200
+        && data.amount is number && data.amount >= 0
+        && data.dueDate is string && data.dueDate.size() <= 100
+        && data.category is string && data.category.size() <= 100
+        && data.isPaid is bool
+        && data.profileId is string && data.profileId.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid;
+    }
+
+    function isValidInvestment(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 200
+        && data.type is string && (data.type == 'Renda Fixa' || data.type == 'Ações' || data.type == 'Fundos Imobiliários' || data.type == 'Cripto' || data.type == 'Outros')
+        && data.amountInvested is number && data.amountInvested >= 0
+        && data.currentAmount is number && data.currentAmount >= 0
+        && data.acquisitionDate is string && data.acquisitionDate.size() <= 50
+        && data.broker is string && data.broker.size() <= 200
+        && data.profileId is string && data.profileId.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid;
+    }
+
+    // Rules for individual resource domains (Transactions, Bills, Investments)
+
+    match /transactions/{transactionId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(transactionId) && isValidTransaction(request.resource.data);
+      allow update: if isSignedIn() && isValidId(transactionId) && resource.data.userId == request.auth.uid && isValidTransaction(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /monthly_bills/{billId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(billId) && isValidMonthlyBill(request.resource.data);
+      allow update: if isSignedIn() && isValidId(billId) && resource.data.userId == request.auth.uid && isValidMonthlyBill(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /investments/{investmentId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(investmentId) && isValidInvestment(request.resource.data);
+      allow update: if isSignedIn() && isValidId(investmentId) && resource.data.userId == request.auth.uid && isValidInvestment(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

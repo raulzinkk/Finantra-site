@@ -18,7 +18,7 @@ import {
   SEED_INVESTMENTS
 } from './utils';
 import {
-  testConnection,
+  testFirebaseConnection as testConnection,
   fetchTransactions,
   upsertTransaction,
   deleteTransactionFromDb,
@@ -27,8 +27,9 @@ import {
   deleteMonthlyBillFromDb,
   fetchInvestments,
   upsertInvestment,
-  deleteInvestmentFromDb
-} from './supabaseService';
+  deleteInvestmentFromDb,
+  auth
+} from './firebaseService';
 
 // Subcomponents
 import DatabaseStatus from './components/DatabaseStatus';
@@ -127,35 +128,43 @@ export default function App() {
     setTipIndex(Math.floor(Math.random() * TIPS.length));
   }, []);
 
-  // 1. Initial Session Restoration
+  // 1. Initial Session Restoration & Firebase Auth Watcher
   useEffect(() => {
-    const keepLogged = localStorage.getItem('finantra_keep_logged_in') === 'true';
-    const savedEmail = localStorage.getItem('finantra_saved_user_email');
-    if (keepLogged && savedEmail) {
-      setLoggedInUser(savedEmail.toLowerCase());
-    } else {
-      // Load public / guest profile configurations
-      const storedActiveId = localStorage.getItem('fin_active_id') || 'p-default';
-      setCurrentProfileId(storedActiveId);
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && user.email) {
+        setLoggedInUser(user.email.toLowerCase());
+      } else {
+        const keepLogged = localStorage.getItem('finantra_keep_logged_in') === 'true';
+        const savedEmail = localStorage.getItem('finantra_saved_user_email');
+        if (keepLogged && savedEmail) {
+          setLoggedInUser(savedEmail.toLowerCase());
+        } else {
+          // Load public / guest profile configurations
+          const storedActiveId = localStorage.getItem('fin_active_id') || 'p-default';
+          setCurrentProfileId(storedActiveId);
 
-      const storedProfilesStr = localStorage.getItem('fin_profiles');
-      let loadedProfiles: AppProfile[] = [];
-      if (storedProfilesStr) {
-        try { loadedProfiles = JSON.parse(storedProfilesStr); } catch { loadedProfiles = []; }
-      }
-      if (loadedProfiles.length === 0) {
-        loadedProfiles = [
-          { id: 'p-default', name: 'Minha Carteira', isCloudSync: true }
-        ];
-        localStorage.setItem('fin_profiles', JSON.stringify(loadedProfiles));
-      }
-      setProfiles(loadedProfiles);
+          const storedProfilesStr = localStorage.getItem('fin_profiles');
+          let loadedProfiles: AppProfile[] = [];
+          if (storedProfilesStr) {
+            try { loadedProfiles = JSON.parse(storedProfilesStr); } catch { loadedProfiles = []; }
+          }
+          if (loadedProfiles.length === 0) {
+            loadedProfiles = [
+              { id: 'p-default', name: 'Minha Carteira', isCloudSync: true }
+            ];
+            localStorage.setItem('fin_profiles', JSON.stringify(loadedProfiles));
+          }
+          setProfiles(loadedProfiles);
 
-      const storedPrefs = localStorage.getItem('fin_preferences');
-      if (storedPrefs) {
-        try { setPreferences(JSON.parse(storedPrefs)); } catch {}
+          const storedPrefs = localStorage.getItem('fin_preferences');
+          if (storedPrefs) {
+            try { setPreferences(JSON.parse(storedPrefs)); } catch {}
+          }
+        }
       }
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // 1.5. Dynamic User Data Isolation Switcher
@@ -281,18 +290,7 @@ export default function App() {
     }
   }, [currentProfileId, loadProfileData]);
 
-  // Method to check connections programmatically
-  const verifySupabaseConnection = async () => {
-    setIsSyncing(true);
-    const alive = await testConnection();
-    if (alive) {
-      setDbStatus({ isConnected: true, isSynced: true });
-      await loadProfileData(currentProfileId, true);
-    } else {
-      setDbStatus({ isConnected: false, isSynced: false, errorMsg: 'Sem resposta do banco de dados.' });
-    }
-    setIsSyncing(false);
-  };
+
 
   // Toggle cloud sync parameter on the active profile
   const handleToggleSync = (isSyncEnabled: boolean) => {

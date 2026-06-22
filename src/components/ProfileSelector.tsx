@@ -26,15 +26,6 @@ import {
   Server,
   Code
 } from 'lucide-react';
-import {
-  testConnection,
-  getSavedSupabaseConfig,
-  updateSupabaseConfig,
-  resetSupabaseConfig,
-  isUsingDefaultSandboxKey,
-  SUPABASE_SQL_SETUP
-} from '../supabaseService';
-
 interface ProfileSelectorProps {
   currentProfile: AppProfile;
   profiles: AppProfile[];
@@ -60,62 +51,6 @@ export default function ProfileSelector({
   const [customPasscode, setCustomPasscode] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-  // Supabase states
-  const [dbUrl, setDbUrl] = useState('');
-  const [dbKey, setDbKey] = useState('');
-  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'failed'>('idle');
-  const [testMessage, setTestMessage] = useState('');
-  const [isDefault, setIsDefault] = useState(true);
-  const [showSqlInstructions, setShowSqlInstructions] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
-
-  useEffect(() => {
-    const config = getSavedSupabaseConfig();
-    setDbUrl(config.url);
-    setDbKey(config.anonKey);
-    setIsDefault(isUsingDefaultSandboxKey());
-  }, []);
-
-  const handleSaveAndTestConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dbUrl.trim() || !dbKey.trim()) {
-      setTestStatus('failed');
-      setTestMessage('Por favor, preencha a URL e a Chave de Acesso Anon.');
-      return;
-    }
-
-    setTestStatus('testing');
-    setTestMessage('Conectando e enviando requisição de teste para o Supabase...');
-
-    try {
-      // Temporarily update config inside client
-      updateSupabaseConfig(dbUrl, dbKey);
-      
-      const success = await testConnection();
-      if (success) {
-        setTestStatus('success');
-        setTestMessage('Sincronização Ativada! O Finantra conseguiu se comunicar e autenticar com o seu banco de dados Supabase com sucesso!');
-        setIsDefault(isUsingDefaultSandboxKey());
-      } else {
-        setTestStatus('failed');
-        setTestMessage('Falha ao conectar no Supabase. Certifique-se de que a URL e a Chave Anon/Client estão corretas, e se as tabelas foram criadas com o script SQL.');
-      }
-    } catch (err: any) {
-      setTestStatus('failed');
-      setTestMessage(`Erro inesperado de rede: ${err.message || err}`);
-    }
-  };
-
-  const handleResetConfig = () => {
-    resetSupabaseConfig();
-    const config = getSavedSupabaseConfig();
-    setDbUrl(config.url);
-    setDbKey(config.anonKey);
-    setIsDefault(isUsingDefaultSandboxKey());
-    setTestStatus('idle');
-    setTestMessage('');
-  };
 
   // Form handling
   const handleCreateProfile = (e: React.FormEvent) => {
@@ -394,139 +329,7 @@ export default function ProfileSelector({
         </div>
       </div>
 
-      {/* Supabase Database Sync Panel */}
-      <div id="supabase-sync-panel" className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5 shadow-xs">
-        <div className="flex items-center justify-between border-b border-slate-150 pb-3">
-          <div className="flex items-center gap-2">
-            <Database className="w-5 h-5 text-indigo-600" />
-            <h3 className="font-bold text-slate-900 tracking-tight text-base">Sincronização com Supabase (Nuvem Própria)</h3>
-          </div>
-          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-            isDefault 
-              ? 'bg-amber-50 text-amber-800 border border-amber-200' 
-              : testStatus === 'success'
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                : 'bg-rose-50 text-rose-800 border border-rose-200'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isDefault ? 'bg-amber-500 animate-pulse' : testStatus === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-            {isDefault ? 'Modo Local (Demo)' : testStatus === 'success' ? 'Online Sincronizado' : 'Conexão Pendente / Falha'}
-          </span>
-        </div>
-
-        <p className="text-xs text-slate-550 leading-relaxed">
-          Para que seus logins, despesas, objetivos e investimentos sejam salvos de forma 100% permanente na nuvem (sem perda ao limpar o navegador ou em múltiplos dispositivos), configure as chaves do seu próprio projeto <strong>Supabase</strong> abaixo.
-        </p>
-
-        <form onSubmit={handleSaveAndTestConfig} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Server className="w-3.5 h-3.5 text-slate-400" />
-                <span>Supabase API URL</span>
-              </label>
-              <input
-                id="supabase-url-input"
-                type="url"
-                required
-                placeholder="Ex: https://xxxxxx.supabase.co"
-                value={dbUrl}
-                onChange={(e) => setDbUrl(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 focus:border-slate-800 focus:bg-white text-xs rounded-xl px-4 py-2.5 text-slate-800 outline-none transition-all font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <KeyRound className="w-3.5 h-3.5 text-slate-400" />
-                <span>Supabase Anon/Public Key</span>
-              </label>
-              <input
-                id="supabase-key-input"
-                type="password"
-                required
-                placeholder="Ex: eyJhbGciOi..."
-                value={dbKey}
-                onChange={(e) => setDbKey(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 focus:border-slate-800 focus:bg-white text-xs rounded-xl px-4 py-2.5 text-slate-800 outline-none transition-all font-mono"
-              />
-            </div>
-          </div>
-
-          {/* Connection Test Status Output */}
-          {testStatus !== 'idle' && (
-            <div className={`p-3.5 rounded-xl border text-xs flex items-start gap-2.5 animate-fadeIn ${
-              testStatus === 'testing'
-                ? 'bg-blue-50 border-blue-150 text-blue-800'
-                : testStatus === 'success'
-                  ? 'bg-emerald-50 border-emerald-150 text-emerald-805'
-                  : 'bg-rose-50 border-rose-150 text-rose-800'
-            }`}>
-              {testStatus === 'testing' && <RefreshCw className="w-4 h-4 shrink-0 mt-0.5 text-blue-600 animate-spin" />}
-              {testStatus === 'success' && <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />}
-              {testStatus === 'failed' && <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />}
-              <span className="leading-relaxed">{testMessage}</span>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2 pt-1">
-            <button
-              id="btn-test-and-save-db"
-              type="submit"
-              disabled={testStatus === 'testing'}
-              className="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${testStatus === 'testing' ? 'animate-spin' : ''}`} />
-              Salvar e Testar Sincronização
-            </button>
-
-            {!isDefault && (
-              <button
-                id="btn-reset-to-local-db"
-                type="button"
-                onClick={handleResetConfig}
-                className="px-5 py-2.5 bg-slate-150 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-              >
-                Voltar para Banco Local
-              </button>
-            )}
-          </div>
-        </form>
-
-        <div className="border-t border-slate-150 pt-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <button
-              id="btn-toggle-sql-helper"
-              type="button"
-              onClick={() => setShowSqlInstructions(!showSqlInstructions)}
-              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg cursor-pointer transition-all"
-            >
-              <Code className="w-3.5 h-3.5" />
-              {showSqlInstructions ? 'Ocultar Script do Banco (SQL)' : 'Ver Script de Configuração SQL'}
-            </button>
-          </div>
-
-          {showSqlInstructions && (
-            <div className="bg-slate-950 text-slate-300 rounded-xl p-4 font-mono text-[11px] leading-relaxed relative animate-fadeIn max-h-[220px] overflow-y-auto border border-slate-800">
-              <div className="absolute right-3 top-3 z-10">
-                <button
-                  id="btn-copy-sql-script"
-                  onClick={() => {
-                    navigator.clipboard.writeText(SUPABASE_SQL_SETUP);
-                    setCopiedSql(true);
-                    setTimeout(() => setCopiedSql(false), 2000);
-                  }}
-                  className="bg-slate-800 hover:bg-slate-750 text-white font-bold px-2.5 py-1 rounded-md text-[9px] cursor-pointer transition-all"
-                >
-                  {copiedSql ? 'Copiado!' : 'Copiar'}
-                </button>
-              </div>
-              <pre className="whitespace-pre-wrap">{SUPABASE_SQL_SETUP}</pre>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 3. Security Credentials Check Info Banner */}
+      {/* Privacy Information Banner */}
       <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 flex flex-col sm:flex-row items-start gap-4 shadow-xs">
         <div className="p-3 bg-white text-slate-750 border border-slate-150 rounded-xl shrink-0 shadow-xs">
           <ShieldCheck className="w-6 h-6" />
