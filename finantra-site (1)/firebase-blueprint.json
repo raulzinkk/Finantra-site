@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial earned or spent transaction details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["earnings", "expenses"] },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "notes": { "type": "string" },
+        "profileId": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "type", "description", "amount", "category", "date", "profileId", "userId"]
+    },
+    "MonthlyBill": {
+      "title": "MonthlyBill",
+      "description": "A monthly recurring bill",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "dueDate": { "type": "string" },
+        "category": { "type": "string" },
+        "isPaid": { "type": "boolean" },
+        "notes": { "type": "string" },
+        "profileId": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "description", "amount", "dueDate", "category", "isPaid", "profileId", "userId"]
+    },
+    "Investment": {
+      "title": "Investment",
+      "description": "An investment asset details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Renda Fixa", "Ações", "Fundos Imobiliários", "Cripto", "Outros"] },
+        "amountInvested": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "yieldRate": { "type": "number" },
+        "acquisitionDate": { "type": "string" },
+        "broker": { "type": "string" },
+        "profileId": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "type", "amountInvested", "currentAmount", "acquisitionDate", "broker", "profileId", "userId"]
+    }
+  },
+  "firestore": {
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User transaction records filtered by authenticated userId"
+    },
+    "/monthly_bills/{billId}": {
+      "schema": "MonthlyBill",
+      "description": "User fixed monthly bills records"
+    },
+    "/investments/{investmentId}": {
+      "schema": "Investment",
+      "description": "User investment records database"
+    }
+  }
+}
