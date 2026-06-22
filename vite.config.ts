@@ -3,25 +3,23 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
 
-export default defineConfig(() => {
-  return {
-    base: '/Finantra-site/',
+export default defineConfig(() => ({
+  base: './',
 
-    plugins: [react(), tailwindcss()],
-    
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
+  plugins: [react(), tailwindcss()],
+
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, '.'),
     },
+  },
 
-    server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify — file watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
+  servidor: {
+    // O HMR está desativado no AI Studio através da variável de ambiente
+    // Não modifique — o monitoramento de arquivos está desativado para evitar edições.
+    hmr: process.env.DISABLE_HMR !== 'true',
 
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
-    },
-  };
-});
+    // Desativa o monitoramento de arquivos quando DISABLE_HMR for verdadeiro
+    observar: process.env.DISABLE_HMR === 'true' ? null : {},
+  },
+}));
